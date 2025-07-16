@@ -103,6 +103,8 @@ Aplikasi saat ini berjalan dalam **mode demo** dengan:
 - ✅ Siap pakai langsung untuk testing UI/UX
 - ✅ Login: admin/admin123
 
+Untuk beralih ke mode produksi, ubah variabel `APP_MODE` pada file `.env` menjadi `production`.
+
 ### Mode Production (Real Blogger Integration)
 Untuk menggunakan dengan Blogger API sesungguhnya:
 
@@ -153,7 +155,8 @@ Untuk menggunakan dengan Blogger API sesungguhnya:
    # Server
    PORT=3002
    NODE_ENV=production
-   
+   APP_MODE=production
+
    # Admin Account
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD=your_secure_password

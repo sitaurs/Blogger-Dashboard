@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const OAuthToken = require('../models/OAuthToken');
+const isDemo = process.env.APP_MODE !== 'production';
 
 class BloggerService {
   constructor() {
@@ -213,13 +214,12 @@ class BloggerService {
 
   async getBlogs() {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock data
-      // In production, uncomment the following:
-      // const response = await this.blogger.blogs.listByUser({ userId: 'self' });
-      // return response.data.items || [];
-      
+      if (!isDemo) {
+        const response = await this.blogger.blogs.listByUser({ userId: 'self' });
+        return response.data.items || [];
+      }
       return this.getMockBlogs();
     } catch (error) {
       console.log('Using mock blogs data');
@@ -229,18 +229,18 @@ class BloggerService {
 
   async getPosts(blogId, options = {}) {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock data
-      // In production, uncomment the following:
-      // const response = await this.blogger.posts.list({
-      //   blogId,
-      //   maxResults: options.maxResults || 10,
-      //   pageToken: options.pageToken,
-      //   status: options.status || ['live', 'draft']
-      // });
-      // return response.data;
-      
+      if (!isDemo) {
+        const response = await this.blogger.posts.list({
+          blogId,
+          maxResults: options.maxResults || 10,
+          pageToken: options.pageToken,
+          status: options.status || ['live', 'draft']
+        });
+        return response.data;
+      }
+
       return {
         items: this.getMockPosts(),
         nextPageToken: null
@@ -256,9 +256,12 @@ class BloggerService {
 
   async getPages(blogId) {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock data
+      if (!isDemo) {
+        const response = await this.blogger.pages.list({ blogId });
+        return response.data;
+      }
       return {
         items: this.getMockPages()
       };
@@ -272,9 +275,15 @@ class BloggerService {
 
   async getComments(blogId, postId = null) {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock data
+      if (!isDemo) {
+        const response = await this.blogger.comments.list({
+          blogId,
+          postId
+        });
+        return response.data;
+      }
       return {
         items: this.getMockComments()
       };
@@ -288,9 +297,21 @@ class BloggerService {
 
   async createPost(blogId, postData) {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock response
+      if (!isDemo) {
+        const response = await this.blogger.posts.insert({
+          blogId,
+          requestBody: {
+            title: postData.title,
+            content: postData.content,
+            labels: postData.labels || [],
+            status: postData.isDraft ? 'DRAFT' : 'LIVE'
+          }
+        });
+        return response.data;
+      }
+
       const newPost = {
         id: Date.now().toString(),
         title: postData.title,
@@ -303,7 +324,7 @@ class BloggerService {
           displayName: 'Admin User'
         }
       };
-      
+
       console.log('📝 Post created (mock):', newPost.title);
       return newPost;
     } catch (error) {
@@ -313,9 +334,22 @@ class BloggerService {
 
   async updatePost(blogId, postId, postData) {
     await this.ensureValidToken();
-    
+
     try {
-      // For demo, return mock response
+      if (!isDemo) {
+        const response = await this.blogger.posts.update({
+          blogId,
+          postId,
+          requestBody: {
+            title: postData.title,
+            content: postData.content,
+            labels: postData.labels || [],
+            status: postData.isDraft ? 'DRAFT' : 'LIVE'
+          }
+        });
+        return response.data;
+      }
+
       const updatedPost = {
         id: postId,
         title: postData.title,
@@ -324,7 +358,7 @@ class BloggerService {
         updated: new Date().toISOString(),
         labels: postData.labels || []
       };
-      
+
       console.log('✏️  Post updated (mock):', updatedPost.title);
       return updatedPost;
     } catch (error) {
@@ -334,8 +368,13 @@ class BloggerService {
 
   async deletePost(blogId, postId) {
     await this.ensureValidToken();
-    
+
     try {
+      if (!isDemo) {
+        await this.blogger.posts.delete({ blogId, postId });
+        return { success: true };
+      }
+
       console.log('🗑️  Post deleted (mock):', postId);
       return { success: true };
     } catch (error) {
