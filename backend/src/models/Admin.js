@@ -1,5 +1,14 @@
 // Mock Admin model for demo purposes
-// In production, use real Mongoose model
+// In production, use real Mongoose model or a proper database
+
+const bcrypt = require('bcryptjs');
+
+// Determine admin credentials from environment with sensible defaults
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+// Hash the admin password once when the module is loaded
+const HASHED_PASSWORD = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 
 class Admin {
   constructor(data) {
@@ -12,11 +21,11 @@ class Admin {
 
   static async findByUsername(username) {
     // Mock admin user
-    if (username === process.env.ADMIN_USERNAME || username === 'admin') {
+    if (username === ADMIN_USERNAME || username === 'admin') {
       return new Admin({
         id: '1',
-        username: 'admin',
-        password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password: admin123
+        username: ADMIN_USERNAME,
+        password: HASHED_PASSWORD,
         email: 'admin@blogger-dashboard.com'
       });
     }
