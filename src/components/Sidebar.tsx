@@ -82,14 +82,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 
                 return (
                   <li key={item.path}>
-                    <NavLink
-                      to={item.path}
-                      onClick={onClose}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive
-                          ? 'bg-white/20 text-white shadow-lg'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
+                <NavLink
+                  to={item.path}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      onClose();
+                    }
+                  }}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="font-medium">{item.label}</span>
