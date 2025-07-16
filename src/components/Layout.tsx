@@ -25,9 +25,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-400">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-400 lg:flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="lg:ml-80">
+      <div className="flex-1 lg:ml-0">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <main className="p-6">
           <motion.div
