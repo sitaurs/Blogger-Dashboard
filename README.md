@@ -46,7 +46,7 @@ Sebuah aplikasi web full-stack yang elegan dan powerful untuk mengelola blog Blo
 
 ### 1. Clone Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/sitaurs/Blogger-Dashboard
 cd pusat-kendali-blogger
 ```
 
