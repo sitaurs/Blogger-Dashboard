@@ -51,9 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         initial={{ x: -320 }}
         animate={{ x: isOpen ? 0 : -320 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 h-full w-80 sidebar-glass z-50 lg:translate-x-0 lg:static lg:z-auto"
+        className="fixed left-0 top-0 h-full lg:h-screen w-80 sidebar-glass z-50 lg:translate-x-0 lg:sticky lg:top-0 lg:z-auto"
       >
-        <div className="p-6 h-full flex flex-col">
+        <div className="p-6 h-full lg:h-screen flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
