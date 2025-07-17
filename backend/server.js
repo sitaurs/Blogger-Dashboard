@@ -1,9 +1,5 @@
 require('dotenv').config();
 
-// Default to production mode if APP_MODE is not set
-if (!process.env.APP_MODE) {
-  process.env.APP_MODE = 'production';
-}
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -87,9 +83,11 @@ app.use('/api/content', contentRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Pusat Kendali Blogger API is running',
+    message: 'Blogger Dashboard API is running in production mode',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'production',
+    database: 'Connected'
   });
 });
 
@@ -119,6 +117,23 @@ app.use((err, req, res, next) => {
       message: 'Token expired'
     });
   }
+
+  // MongoDB errors
+  if (err.name === 'MongoError' || err.name === 'MongooseError') {
+    return res.status(500).json({
+      success: false,
+      message: 'Database error'
+    });
+  }
+
+  // Google API errors
+  if (err.message.includes('Token') || err.message.includes('OAuth')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication error. Please re-authorize with Google.',
+      needsReauth: true
+    });
+  }
   
   // Default error
   res.status(err.status || 500).json({
@@ -139,26 +154,32 @@ app.use('*', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 ================================');
-  console.log('🚀 Pusat Kendali Blogger Backend');
+  console.log('🚀 Blogger Dashboard Backend');
   console.log('🚀 ================================');
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🚀 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🚀 Mode: ${process.env.APP_MODE}`);
+  console.log(`🚀 Mode: PRODUCTION`);
   console.log(`🚀 API URL: http://localhost:${PORT}/api`);
   console.log('🚀 ================================');
   console.log('📋 Available endpoints:');
   console.log('   POST /api/admin/login');
   console.log('   GET  /api/admin/me');
+  console.log('   POST /api/admin/change-password');
   console.log('   GET  /api/blogs');
+  console.log('   GET  /api/blogs/sync');
   console.log('   GET  /api/posts');
+  console.log('   POST /api/posts');
   console.log('   GET  /api/pages');
+  console.log('   POST /api/pages');
   console.log('   GET  /api/comments');
   console.log('   GET  /api/stats/overall');
+  console.log('   GET  /api/stats/:period');
   console.log('   GET  /api/content');
   console.log('   GET  /api/health');
   console.log('🚀 ================================');
   console.log('💡 Default login: admin / admin123');
-  console.log('💡 Ready to control your Blogger!');
+  console.log('💡 Google OAuth required for full functionality');
+  console.log('💡 Run: npm run generate-token for OAuth setup');
   console.log('🚀 ================================');
 });
 

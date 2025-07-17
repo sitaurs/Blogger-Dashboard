@@ -6,7 +6,8 @@ const {
   getPost, 
   createPost, 
   updatePost, 
-  deletePost 
+  deletePost,
+  getPostStats
 } = require('../controllers/postController');
 
 const router = express.Router();
@@ -19,6 +20,9 @@ router.get('/', getPosts);
 
 // GET /api/posts/:postId
 router.get('/:postId', getPost);
+
+// GET /api/posts/:postId/stats
+router.get('/:postId/stats', getPostStats);
 
 // POST /api/posts
 router.post('/', validatePost, handleValidationErrors, createPost);

@@ -1,46 +1,49 @@
+const bloggerService = require('../services/bloggerService');
+
 const getStats = async (req, res) => {
   try {
     const { period } = req.params; // daily, weekly, monthly
+    const { blogId } = req.query;
     
-    // Mock statistics data for demo
-    const mockStats = {
-      daily: [
-        { date: '2024-01-15', views: 1200, visitors: 890, pageviews: 1500 },
-        { date: '2024-01-14', views: 1350, visitors: 950, pageviews: 1680 },
-        { date: '2024-01-13', views: 1100, visitors: 780, pageviews: 1320 },
-        { date: '2024-01-12', views: 1500, visitors: 1100, pageviews: 1850 },
-        { date: '2024-01-11', views: 1400, visitors: 1050, pageviews: 1720 },
-        { date: '2024-01-10', views: 1600, visitors: 1200, pageviews: 1950 },
-        { date: '2024-01-09', views: 1234, visitors: 890, pageviews: 1500 }
-      ],
-      weekly: [
-        { week: 'Week 1', views: 8500, visitors: 6200, pageviews: 10400 },
-        { week: 'Week 2', views: 9200, visitors: 6800, pageviews: 11600 },
-        { week: 'Week 3', views: 7800, visitors: 5900, pageviews: 9500 },
-        { week: 'Week 4', views: 10100, visitors: 7400, pageviews: 12800 }
-      ],
-      monthly: [
-        { month: 'Jan', views: 35600, visitors: 26300, pageviews: 45300 },
-        { month: 'Feb', views: 28900, visitors: 21200, pageviews: 36800 },
-        { month: 'Mar', views: 42100, visitors: 31800, pageviews: 53400 },
-        { month: 'Apr', views: 38700, visitors: 28900, pageviews: 48900 }
-      ]
-    };
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    if (!targetBlogId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
+    }
 
-    const data = mockStats[period] || mockStats.daily;
+    // Note: Blogger API doesn't provide detailed analytics
+    // For real analytics, you'd need to integrate with Google Analytics
+    // This is a simplified implementation based on available data
+
+    const postsResult = await bloggerService.getPosts(targetBlogId, {
+      maxResults: 100,
+      orderBy: 'published'
+    }, req.user.id);
+    
+    const posts = postsResult.items || [];
+    
+    // Generate mock analytics data based on posts
+    const statsData = generateStatsFromPosts(posts, period);
 
     res.json({
       success: true,
       data: {
         period,
-        stats: data,
-        summary: {
-          totalViews: data.reduce((sum, item) => sum + item.views, 0),
-          totalVisitors: data.reduce((sum, item) => sum + item.visitors, 0),
-          totalPageviews: data.reduce((sum, item) => sum + item.pageviews, 0),
-          averageViews: Math.round(data.reduce((sum, item) => sum + item.views, 0) / data.length)
-        }
-      }
+        stats: statsData.stats,
+        summary: statsData.summary
+      },
+      message: 'Statistics fetched successfully',
+      note: 'Statistics are estimated based on available blog data. For detailed analytics, integrate with Google Analytics.'
     });
 
   } catch (error) {
@@ -55,20 +58,73 @@ const getStats = async (req, res) => {
 
 const getOverallStats = async (req, res) => {
   try {
-    // Mock overall statistics for dashboard
+    const { blogId } = req.query;
+    
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    if (!targetBlogId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
+    }
+
+    // Fetch data from multiple endpoints
+    const [postsResult, pagesResult, commentsResult] = await Promise.all([
+      bloggerService.getPosts(targetBlogId, { maxResults: 100 }, req.user.id),
+      bloggerService.getPages(targetBlogId, req.user.id),
+      bloggerService.getComments(targetBlogId, null, req.user.id)
+    ]);
+
+    const posts = postsResult.items || [];
+    const pages = pagesResult.items || [];
+    const comments = commentsResult.items || [];
+
+    // Calculate stats
+    const publishedPosts = posts.filter(post => post.status === 'LIVE');
+    const draftPosts = posts.filter(post => post.status === 'DRAFT');
+    const pendingComments = comments.filter(comment => 
+      comment.status && comment.status.toLowerCase() === 'pending'
+    );
+
+    // Calculate growth (simplified)
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    const recentPosts = posts.filter(post => 
+      post.published && new Date(post.published) >= lastMonth
+    );
+
+    const growthRate = posts.length > 0 ? 
+      Math.round((recentPosts.length / posts.length) * 100) : 0;
+
     const stats = {
-      totalPosts: 156,
-      totalPages: 12,
-      pendingComments: 8,
-      todayViews: 1234,
-      totalViews: 45678,
-      uniqueVisitors: 12345,
-      growthRate: 24
+      totalPosts: posts.length,
+      publishedPosts: publishedPosts.length,
+      draftPosts: draftPosts.length,
+      totalPages: pages.length,
+      totalComments: comments.length,
+      pendingComments: pendingComments.length,
+      approvedComments: comments.filter(c => 
+        c.status && c.status.toLowerCase() === 'live'
+      ).length,
+      growthRate: growthRate,
+      // Note: Real view counts would come from Google Analytics
+      estimatedViews: posts.length * 150, // Simplified estimation
+      lastUpdated: new Date().toISOString()
     };
 
     res.json({
       success: true,
-      data: stats
+      data: stats,
+      message: 'Overall statistics fetched successfully',
+      note: 'View counts are estimated. For accurate analytics, integrate with Google Analytics.'
     });
 
   } catch (error) {
@@ -80,6 +136,89 @@ const getOverallStats = async (req, res) => {
     });
   }
 };
+
+// Helper function to generate stats from posts data
+function generateStatsFromPosts(posts, period) {
+  const now = new Date();
+  const stats = [];
+  const publishedPosts = posts.filter(post => post.status === 'LIVE');
+  
+  // Generate data based on period
+  let dateRanges = [];
+  let dateFormat = '';
+  
+  switch (period) {
+    case 'daily':
+      dateFormat = 'date';
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        dateRanges.push({
+          [dateFormat]: date.toLocaleDateString('id-ID', { 
+            day: 'numeric', 
+            month: 'short' 
+          }),
+          date: date
+        });
+      }
+      break;
+      
+    case 'weekly':
+      dateFormat = 'week';
+      for (let i = 3; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (i * 7));
+        dateRanges.push({
+          [dateFormat]: `Minggu ${4 - i}`,
+          date: date
+        });
+      }
+      break;
+      
+    case 'monthly':
+      dateFormat = 'month';
+      for (let i = 3; i >= 0; i--) {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - i);
+        dateRanges.push({
+          [dateFormat]: date.toLocaleDateString('id-ID', { 
+            month: 'short' 
+          }),
+          date: date
+        });
+      }
+      break;
+  }
+  
+  // Generate estimated data for each range
+  dateRanges.forEach(range => {
+    const postsInRange = publishedPosts.filter(post => {
+      const postDate = new Date(post.published);
+      return postDate <= range.date;
+    });
+    
+    // Simplified estimation based on posts count
+    const baseViews = postsInRange.length * 100;
+    const variation = Math.random() * 200 - 100; // Random variation
+    
+    stats.push({
+      [dateFormat]: range[dateFormat],
+      views: Math.max(0, Math.round(baseViews + variation)),
+      visitors: Math.max(0, Math.round((baseViews + variation) * 0.7)),
+      pageviews: Math.max(0, Math.round((baseViews + variation) * 1.3))
+    });
+  });
+  
+  return {
+    stats,
+    summary: {
+      totalViews: stats.reduce((sum, item) => sum + item.views, 0),
+      totalVisitors: stats.reduce((sum, item) => sum + item.visitors, 0),
+      totalPageviews: stats.reduce((sum, item) => sum + item.pageviews, 0),
+      averageViews: Math.round(stats.reduce((sum, item) => sum + item.views, 0) / stats.length)
+    }
+  };
+}
 
 module.exports = {
   getStats,

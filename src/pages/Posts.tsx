@@ -1,55 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Plus, Edit, Trash2, Eye, Calendar } from 'lucide-react';
-
-// Mock data
-const mockPosts = [
-  {
-    id: '1',
-    title: 'Getting Started with React Development',
-    status: 'published',
-    published: '2024-01-15',
-    views: 1250,
-    comments: 8,
-    labels: ['React', 'Tutorial', 'Beginner']
-  },
-  {
-    id: '2',
-    title: 'Advanced TypeScript Features You Should Know',
-    status: 'draft',
-    published: null,
-    views: 0,
-    comments: 0,
-    labels: ['TypeScript', 'Advanced', 'Development']
-  },
-  {
-    id: '3',
-    title: 'Building Responsive UIs with Tailwind CSS',
-    status: 'published',
-    published: '2024-01-12',
-    views: 890,
-    comments: 12,
-    labels: ['CSS', 'Tailwind', 'UI/UX']
-  },
-  {
-    id: '4',
-    title: 'State Management in Modern React Applications',
-    status: 'scheduled',
-    published: '2024-01-20',
-    views: 0,
-    comments: 0,
-    labels: ['React', 'State Management', 'Redux']
-  },
-  {
-    id: '5',
-    title: 'Performance Optimization Techniques',
-    status: 'published',
-    published: '2024-01-10',
-    views: 2100,
-    comments: 25,
-    labels: ['Performance', 'Optimization', 'Web']
-  },
-];
+import { Search, Filter, Plus, Edit, Trash2, Eye, Calendar, AlertCircle } from 'lucide-react';
+import { usePosts, useDeletePost } from '../hooks/useApi';
 
 const Posts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,19 +9,29 @@ const Posts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 10;
 
-  const filteredPosts = mockPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const { data: postsData, isLoading, error, refetch } = usePosts({
+    page: currentPage,
+    limit: postsPerPage,
+    search: searchTerm || undefined,
+    status: statusFilter === 'all' ? undefined : statusFilter
   });
 
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-  const startIndex = (currentPage - 1) * postsPerPage;
-  const currentPosts = filteredPosts.slice(startIndex, startIndex + postsPerPage);
+  const deletePostMutation = useDeletePost();
+
+  const handleDelete = async (postId: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus postingan ini?')) {
+      try {
+        await deletePostMutation.mutateAsync(postId);
+        alert('Postingan berhasil dihapus');
+      } catch (error) {
+        alert('Gagal menghapus postingan');
+      }
+    }
+  };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published':
+    switch (status?.toLowerCase()) {
+      case 'live':
         return 'bg-green-500/20 text-green-300';
       case 'draft':
         return 'bg-gray-500/20 text-gray-300';
@@ -79,6 +41,46 @@ const Posts: React.FC = () => {
         return 'bg-gray-500/20 text-gray-300';
     }
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="glass-card p-8 flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
+          <p className="text-white/80 text-lg font-medium">Loading Posts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="glass-card p-8 flex flex-col items-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-red-400" />
+          <p className="text-red-200 text-lg font-medium">Failed to load posts</p>
+          <p className="text-red-200/80 text-sm">{error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const posts = postsData?.posts || [];
+  const pagination = postsData?.pagination || {};
 
   return (
     <div className="space-y-6">
@@ -91,6 +93,11 @@ const Posts: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold gradient-text">Postingan</h1>
           <p className="text-white/60 mt-2">Kelola semua postingan blog Anda</p>
+          {pagination.totalItems > 0 && (
+            <p className="text-white/40 text-sm mt-1">
+              {pagination.totalItems} total postingan ditemukan
+            </p>
+          )}
         </div>
         <button className="glass-button px-4 py-2 text-white rounded-lg hover:scale-105 transition-all duration-200 flex items-center space-x-2 mt-4 sm:mt-0">
           <Plus className="w-4 h-4" />
@@ -127,9 +134,8 @@ const Posts: React.FC = () => {
               className="glass-button px-4 py-2 text-white bg-transparent focus:outline-none focus:ring-2 focus:ring-purple-400"
             >
               <option value="all" className="bg-gray-800">Semua Status</option>
-              <option value="published" className="bg-gray-800">Published</option>
+              <option value="live" className="bg-gray-800">Published</option>
               <option value="draft" className="bg-gray-800">Draft</option>
-              <option value="scheduled" className="bg-gray-800">Scheduled</option>
             </select>
           </div>
         </div>
@@ -142,102 +148,157 @@ const Posts: React.FC = () => {
         transition={{ delay: 0.2 }}
         className="glass-card p-6"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left text-white/80 font-medium py-3">Judul</th>
-                <th className="text-left text-white/80 font-medium py-3">Status</th>
-                <th className="text-left text-white/80 font-medium py-3">Tanggal</th>
-                <th className="text-left text-white/80 font-medium py-3">Views</th>
-                <th className="text-left text-white/80 font-medium py-3">Komentar</th>
-                <th className="text-left text-white/80 font-medium py-3">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentPosts.map((post) => (
-                <tr key={post.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="py-4">
-                    <div>
-                      <h3 className="text-white font-medium">{post.title}</h3>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {post.labels.map((label) => (
-                          <span key={label} className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
-                            {label}
+        {posts.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left text-white/80 font-medium py-3">Judul</th>
+                    <th className="text-left text-white/80 font-medium py-3">Status</th>
+                    <th className="text-left text-white/80 font-medium py-3">Tanggal</th>
+                    <th className="text-left text-white/80 font-medium py-3">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {posts.map((post: any) => (
+                    <tr key={post.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="py-4">
+                        <div>
+                          <h3 className="text-white font-medium line-clamp-2">{post.title}</h3>
+                          {post.labels && post.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {post.labels.slice(0, 3).map((label: string) => (
+                                <span key={label} className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
+                                  {label}
+                                </span>
+                              ))}
+                              {post.labels.length > 3 && (
+                                <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
+                                  +{post.labels.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <span className={`px-2 py-1 rounded text-xs ${getStatusColor(post.status)}`}>
+                          {post.status}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center space-x-2 text-white/60">
+                          <Calendar className="w-4 h-4" />
+                          <span className="text-sm">
+                            {post.published ? formatDate(post.published) : 'Belum dipublikasi'}
                           </span>
-                        ))}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(post.status)}`}>
-                      {post.status}
-                    </span>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center space-x-2 text-white/60">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">
-                        {post.published ? new Date(post.published).toLocaleDateString('id-ID') : '-'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center space-x-2 text-white/60">
-                      <Eye className="w-4 h-4" />
-                      <span className="text-sm">{post.views}</span>
-                    </div>
-                  </td>
-                  <td className="py-4">
-                    <span className="text-white/60 text-sm">{post.comments}</span>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Edit">
-                        <Edit className="w-4 h-4 text-white/60" />
-                      </button>
-                      <button className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center space-x-2">
+                          {post.url && (
+                            <a
+                              href={post.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                              title="View Post"
+                            >
+                              <Eye className="w-4 h-4 text-white/60" />
+                            </a>
+                          )}
+                          <button 
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors" 
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4 text-white/60" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(post.id)}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors" 
+                            title="Delete"
+                            disabled={deletePostMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-2 mt-6">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="glass-button px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  currentPage === index + 1
-                    ? 'bg-purple-500 text-white'
-                    : 'glass-button text-white hover:bg-white/20'
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-            
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="glass-button px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center space-x-2 mt-6">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="glass-button px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                {[...Array(pagination.totalPages)].map((_, index) => {
+                  const pageNum = index + 1;
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.totalPages ||
+                    (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-purple-500 text-white'
+                            : 'glass-button text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  } else if (
+                    pageNum === currentPage - 3 ||
+                    pageNum === currentPage + 3
+                  ) {
+                    return (
+                      <span key={pageNum} className="px-2 text-white/60">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                  disabled={currentPage === pagination.totalPages}
+                  className="glass-button px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-white/60" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Tidak ada postingan ditemukan</h3>
+            <p className="text-white/60 mb-4">
+              {searchTerm || statusFilter !== 'all' 
+                ? 'Coba ubah filter atau kata kunci pencarian' 
+                : 'Belum ada postingan yang dibuat'
+              }
+            </p>
+            <button className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2 mx-auto">
+              <Plus className="w-4 h-4" />
+              <span>Buat Postingan Pertama</span>
             </button>
           </div>
         )}

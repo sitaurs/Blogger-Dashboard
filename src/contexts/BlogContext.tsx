@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { useBlogs } from '../hooks/useApi';
 
 interface Blog {
   id: string;
+  blogId: string;
   name: string;
   description: string;
   url: string;
@@ -21,40 +22,26 @@ interface BlogContextType {
   currentBlog: Blog | null;
   setCurrentBlog: (blog: Blog) => void;
   loading: boolean;
-  refreshBlogs: () => Promise<void>;
+  error: any;
+  refreshBlogs: () => void;
 }
 
 const BlogContext = createContext<BlogContextType | undefined>(undefined);
 
 export const BlogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [blogs, setBlogs] = useState<Blog[]>([]);
   const [currentBlog, setCurrentBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
-  const fetchBlogs = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('/api/blogs');
-      setBlogs(response.data);
-      if (response.data.length > 0 && !currentBlog) {
-        setCurrentBlog(response.data[0]);
-      }
-    } catch (error) {
-      console.error('Error fetching blogs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: blogs = [], isLoading: loading, error, refetch } = useBlogs();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchBlogs();
+    if (blogs.length > 0 && !currentBlog) {
+      setCurrentBlog(blogs[0]);
     }
-  }, [isAuthenticated]);
+  }, [blogs, currentBlog]);
 
-  const refreshBlogs = async () => {
-    await fetchBlogs();
+  const refreshBlogs = () => {
+    refetch();
   };
 
   return (
@@ -63,6 +50,7 @@ export const BlogProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentBlog,
       setCurrentBlog,
       loading,
+      error,
       refreshBlogs
     }}>
       {children}

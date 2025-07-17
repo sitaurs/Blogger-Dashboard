@@ -1,85 +1,63 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, TrendingUp, Eye, Users, BarChart3, type LucideIcon } from 'lucide-react';
+import { Calendar, TrendingUp, Eye, Users, BarChart3, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-
-// Mock data
-const mockDailyStats = [
-  { date: '1 Jan', views: 1200, visitors: 890, pageviews: 1500 },
-  { date: '2 Jan', views: 1350, visitors: 950, pageviews: 1680 },
-  { date: '3 Jan', views: 1100, visitors: 780, pageviews: 1320 },
-  { date: '4 Jan', views: 1500, visitors: 1100, pageviews: 1850 },
-  { date: '5 Jan', views: 1400, visitors: 1050, pageviews: 1720 },
-  { date: '6 Jan', views: 1600, visitors: 1200, pageviews: 1950 },
-  { date: '7 Jan', views: 1234, visitors: 890, pageviews: 1500 },
-];
-
-const mockWeeklyStats = [
-  { week: 'Minggu 1', views: 8500, visitors: 6200, pageviews: 10400 },
-  { week: 'Minggu 2', views: 9200, visitors: 6800, pageviews: 11600 },
-  { week: 'Minggu 3', views: 7800, visitors: 5900, pageviews: 9500 },
-  { week: 'Minggu 4', views: 10100, visitors: 7400, pageviews: 12800 },
-];
-
-const mockMonthlyStats = [
-  { month: 'Jan', views: 35600, visitors: 26300, pageviews: 45300 },
-  { month: 'Feb', views: 28900, visitors: 21200, pageviews: 36800 },
-  { month: 'Mar', views: 42100, visitors: 31800, pageviews: 53400 },
-  { month: 'Apr', views: 38700, visitors: 28900, pageviews: 48900 },
-];
-
-const mockLabelStats = [
-  { name: 'React', value: 35, color: '#61DAFB' },
-  { name: 'TypeScript', value: 25, color: '#3178C6' },
-  { name: 'JavaScript', value: 20, color: '#F7DF1E' },
-  { name: 'CSS', value: 15, color: '#1572B6' },
-  { name: 'Other', value: 5, color: '#8B5CF6' },
-];
-
-const mockTopPosts = [
-  { title: 'Getting Started with React', views: 3500 },
-  { title: 'TypeScript Best Practices', views: 2800 },
-  { title: 'CSS Grid Tutorial', views: 2400 },
-  { title: 'JavaScript ES6 Features', views: 2100 },
-  { title: 'Building Modern UIs', views: 1900 },
-];
+import { useStats, useOverallStats } from '../hooks/useApi';
 
 const Stats: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-  const getChartData = () => {
-    switch (activeTab) {
-      case 'weekly':
-        return mockWeeklyStats;
-      case 'monthly':
-        return mockMonthlyStats;
-      default:
-        return mockDailyStats;
-    }
-  };
+  const { data: chartData, isLoading: chartLoading, error: chartError } = useStats(activeTab);
+  const { data: overallStats, isLoading: overallLoading, error: overallError } = useOverallStats();
 
-  const getDateKey = () => {
-    switch (activeTab) {
-      case 'weekly':
-        return 'week';
-      case 'monthly':
-        return 'month';
-      default:
-        return 'date';
-    }
-  };
+  const tabs = [
+    { id: 'daily' as const, label: 'Harian', icon: Calendar },
+    { id: 'weekly' as const, label: 'Mingguan', icon: BarChart3 },
+    { id: 'monthly' as const, label: 'Bulanan', icon: TrendingUp },
+  ];
 
-  interface Tab {
-    id: 'daily' | 'weekly' | 'monthly';
-    label: string;
-    icon: LucideIcon;
+  // Mock data for charts since Blogger API doesn't provide detailed analytics
+  const mockLabelStats = [
+    { name: 'React', value: 35, color: '#61DAFB' },
+    { name: 'TypeScript', value: 25, color: '#3178C6' },
+    { name: 'JavaScript', value: 20, color: '#F7DF1E' },
+    { name: 'CSS', value: 15, color: '#1572B6' },
+    { name: 'Other', value: 5, color: '#8B5CF6' },
+  ];
+
+  const mockTopPosts = [
+    { title: 'Getting Started with React', views: 3500 },
+    { title: 'TypeScript Best Practices', views: 2800 },
+    { title: 'CSS Grid Tutorial', views: 2400 },
+    { title: 'JavaScript ES6 Features', views: 2100 },
+    { title: 'Building Modern UIs', views: 1900 },
+  ];
+
+  if (chartLoading || overallLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="glass-card p-8 flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
+          <p className="text-white/80 text-lg font-medium">Loading Statistics...</p>
+        </div>
+      </div>
+    );
   }
 
-  const tabs: Tab[] = [
-    { id: 'daily', label: 'Harian', icon: Calendar },
-    { id: 'weekly', label: 'Mingguan', icon: BarChart3 },
-    { id: 'monthly', label: 'Bulanan', icon: TrendingUp },
-  ];
+  if (chartError || overallError) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="glass-card p-8 flex flex-col items-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-red-400" />
+          <p className="text-red-200 text-lg font-medium">Failed to load statistics</p>
+          <p className="text-red-200/80 text-sm">{chartError?.message || overallError?.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const chartStats = chartData?.stats || [];
+  const dateKey = activeTab === 'weekly' ? 'week' : activeTab === 'monthly' ? 'month' : 'date';
 
   return (
     <div className="space-y-6">
@@ -91,6 +69,11 @@ const Stats: React.FC = () => {
       >
         <h1 className="text-3xl font-bold gradient-text">Statistik</h1>
         <p className="text-white/60 mt-2">Analisis performa blog Anda</p>
+        {chartData?.note && (
+          <p className="text-yellow-400/80 text-sm mt-2 bg-yellow-500/10 p-3 rounded-lg">
+            💡 {chartData.note}
+          </p>
+        )}
       </motion.div>
 
       {/* Tabs */}
@@ -131,45 +114,54 @@ const Stats: React.FC = () => {
         <h2 className="text-xl font-semibold text-white mb-4">
           Traffic {tabs.find(tab => tab.id === activeTab)?.label}
         </h2>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={getChartData()}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey={getDateKey()} stroke="rgba(255,255,255,0.6)" />
-            <YAxis stroke="rgba(255,255,255,0.6)" />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(255,255,255,0.1)', 
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '8px',
-                color: 'white'
-              }} 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="views" 
-              stroke="#8b5cf6" 
-              strokeWidth={3}
-              dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-              name="Views"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="visitors" 
-              stroke="#06b6d4" 
-              strokeWidth={3}
-              dot={{ fill: '#06b6d4', strokeWidth: 2, r: 4 }}
-              name="Visitors"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="pageviews" 
-              stroke="#10b981" 
-              strokeWidth={3}
-              dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-              name="Page Views"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {chartStats.length > 0 ? (
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={chartStats}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <XAxis dataKey={dateKey} stroke="rgba(255,255,255,0.6)" />
+              <YAxis stroke="rgba(255,255,255,0.6)" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: 'white'
+                }} 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="views" 
+                stroke="#8b5cf6" 
+                strokeWidth={3}
+                dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                name="Views"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="visitors" 
+                stroke="#06b6d4" 
+                strokeWidth={3}
+                dot={{ fill: '#06b6d4', strokeWidth: 2, r: 4 }}
+                name="Visitors"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="pageviews" 
+                stroke="#10b981" 
+                strokeWidth={3}
+                dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                name="Page Views"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-96 text-white/60">
+            <div className="text-center">
+              <BarChart3 className="w-16 h-16 mx-auto mb-4" />
+              <p>Tidak ada data statistik tersedia</p>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Stats Grid */}
@@ -181,7 +173,7 @@ const Stats: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="chart-container"
         >
-          <h2 className="text-xl font-semibold text-white mb-4">Distribusi Label</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Distribusi Label (Estimasi)</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -217,7 +209,7 @@ const Stats: React.FC = () => {
           transition={{ delay: 0.4 }}
           className="chart-container"
         >
-          <h2 className="text-xl font-semibold text-white mb-4">Postingan Terpopuler</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Postingan Terpopuler (Estimasi)</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={mockTopPosts} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -248,24 +240,30 @@ const Stats: React.FC = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <Eye className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-white">45,678</h3>
-          <p className="text-white/60 mt-1">Total Views</p>
+          <h3 className="text-2xl font-bold text-white">
+            {overallStats?.estimatedViews?.toLocaleString() || '0'}
+          </h3>
+          <p className="text-white/60 mt-1">Estimated Views</p>
         </div>
 
         <div className="glass-card p-6 text-center">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <Users className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-white">12,345</h3>
-          <p className="text-white/60 mt-1">Unique Visitors</p>
+          <h3 className="text-2xl font-bold text-white">
+            {overallStats?.totalPosts?.toLocaleString() || '0'}
+          </h3>
+          <p className="text-white/60 mt-1">Total Posts</p>
         </div>
 
         <div className="glass-card p-6 text-center">
           <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <TrendingUp className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-white">+24%</h3>
-          <p className="text-white/60 mt-1">Growth</p>
+          <h3 className="text-2xl font-bold text-white">
+            +{overallStats?.growthRate || 0}%
+          </h3>
+          <p className="text-white/60 mt-1">Growth Rate</p>
         </div>
       </motion.div>
     </div>

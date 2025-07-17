@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
+const bloggerService = require('../services/bloggerService');
 
 const login = async (req, res) => {
   try {
@@ -16,7 +16,7 @@ const login = async (req, res) => {
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, admin.password);
+    const isValidPassword = await admin.comparePassword(password);
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -24,11 +24,15 @@ const login = async (req, res) => {
       });
     }
 
+    // Set current user for blogger service
+    bloggerService.setCurrentUser(admin._id);
+
     // Generate JWT token
     const token = jwt.sign(
       { 
-        id: admin.id, 
-        username: admin.username 
+        id: admin._id, 
+        username: admin.username,
+        email: admin.email 
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -39,14 +43,24 @@ const login = async (req, res) => {
       message: 'Login successful',
       token,
       user: {
-        id: admin.id,
+        id: admin._id,
         username: admin.username,
-        email: admin.email
+        email: admin.email,
+        role: admin.role,
+        lastLogin: admin.lastLogin
       }
     });
 
   } catch (error) {
     console.error('Login error:', error);
+    
+    if (error.message === 'Account is locked') {
+      return res.status(423).json({
+        success: false,
+        message: 'Account is temporarily locked due to too many failed attempts. Please try again later.'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -56,7 +70,7 @@ const login = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    const admin = await Admin.findByUsername(req.user.username);
+    const admin = await Admin.findById(req.user.id).select('-password');
     if (!admin) {
       return res.status(404).json({
         success: false,
@@ -67,9 +81,12 @@ const getMe = async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: admin.id,
+        id: admin._id,
         username: admin.username,
-        email: admin.email
+        email: admin.email,
+        role: admin.role,
+        lastLogin: admin.lastLogin,
+        createdAt: admin.createdAt
       }
     });
 
@@ -82,7 +99,47 @@ const getMe = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify current password
+    const isValidPassword = await admin.comparePassword(currentPassword);
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   login,
-  getMe
+  getMe,
+  changePassword
 };

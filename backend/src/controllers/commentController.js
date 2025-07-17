@@ -4,14 +4,23 @@ const getComments = async (req, res) => {
   try {
     const { blogId, postId, status } = req.query;
     
-    // Use first blog if no blogId specified
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
     let targetBlogId = blogId;
     if (!targetBlogId) {
-      const blogs = await bloggerService.getBlogs();
-      targetBlogId = blogs[0]?.id;
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
     }
 
-    const result = await bloggerService.getComments(targetBlogId, postId);
+    const result = await bloggerService.getComments(targetBlogId, postId, req.user.id);
     let comments = result.items || [];
 
     // Apply status filter if provided
@@ -28,14 +37,17 @@ const getComments = async (req, res) => {
       email: comment.author?.email || 'no-email@example.com',
       content: comment.content,
       postTitle: comment.post?.title || 'Unknown Post',
+      postId: comment.post?.id || postId,
       date: comment.published,
-      status: comment.status.toLowerCase(),
-      website: comment.author?.url || null
+      status: comment.status ? comment.status.toLowerCase() : 'unknown',
+      website: comment.author?.url || null,
+      inReplyTo: comment.inReplyTo || null
     }));
 
     res.json({
       success: true,
-      data: transformedComments
+      data: transformedComments,
+      message: 'Comments fetched successfully'
     });
 
   } catch (error) {
@@ -51,10 +63,41 @@ const getComments = async (req, res) => {
 const updateCommentStatus = async (req, res) => {
   try {
     const { commentId } = req.params;
-    const { status } = req.body; // 'approved', 'pending', 'spam'
+    const { status, blogId, postId } = req.body;
     
-    // Mock comment status update for demo
-    console.log(`💬 Comment ${commentId} status changed to: ${status}`);
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    let targetPostId = postId;
+    
+    if (!targetBlogId || !targetPostId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = targetBlogId || blogs[0].blogId;
+      
+      // If no postId, we need to find it from the comment
+      if (!targetPostId) {
+        const allComments = await bloggerService.getComments(targetBlogId, null, req.user.id);
+        const comment = allComments.items?.find(c => c.id === commentId);
+        if (comment && comment.post) {
+          targetPostId = comment.post.id;
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Post ID is required for comment operations'
+          });
+        }
+      }
+    }
+
+    await bloggerService.updateCommentStatus(targetBlogId, targetPostId, commentId, status, req.user.id);
 
     res.json({
       success: true,
@@ -74,8 +117,41 @@ const updateCommentStatus = async (req, res) => {
 const deleteComment = async (req, res) => {
   try {
     const { commentId } = req.params;
+    const { blogId, postId } = req.query;
     
-    console.log('🗑️  Comment deleted (mock):', commentId);
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    let targetPostId = postId;
+    
+    if (!targetBlogId || !targetPostId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = targetBlogId || blogs[0].blogId;
+      
+      // If no postId, we need to find it from the comment
+      if (!targetPostId) {
+        const allComments = await bloggerService.getComments(targetBlogId, null, req.user.id);
+        const comment = allComments.items?.find(c => c.id === commentId);
+        if (comment && comment.post) {
+          targetPostId = comment.post.id;
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Post ID is required for comment operations'
+          });
+        }
+      }
+    }
+
+    await bloggerService.deleteComment(targetBlogId, targetPostId, commentId, req.user.id);
 
     res.json({
       success: true,

@@ -4,19 +4,29 @@ const getPages = async (req, res) => {
   try {
     const { blogId } = req.query;
     
-    // Use first blog if no blogId specified
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
     let targetBlogId = blogId;
     if (!targetBlogId) {
-      const blogs = await bloggerService.getBlogs();
-      targetBlogId = blogs[0]?.id;
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
     }
 
-    const result = await bloggerService.getPages(targetBlogId);
+    const result = await bloggerService.getPages(targetBlogId, req.user.id);
     const pages = result.items || [];
 
     res.json({
       success: true,
-      data: pages
+      data: pages,
+      message: 'Pages fetched successfully'
     });
 
   } catch (error) {
@@ -34,26 +44,28 @@ const getPage = async (req, res) => {
     const { pageId } = req.params;
     const { blogId } = req.query;
     
-    // Use first blog if no blogId specified
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
     let targetBlogId = blogId;
     if (!targetBlogId) {
-      const blogs = await bloggerService.getBlogs();
-      targetBlogId = blogs[0]?.id;
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
     }
 
-    const result = await bloggerService.getPages(targetBlogId);
-    const page = result.items.find(p => p.id === pageId);
+    const page = await bloggerService.getPage(targetBlogId, pageId, req.user.id);
     
-    if (!page) {
-      return res.status(404).json({
-        success: false,
-        message: 'Page not found'
-      });
-    }
-
     res.json({
       success: true,
-      data: page
+      data: page,
+      message: 'Page fetched successfully'
     });
 
   } catch (error) {
@@ -69,19 +81,30 @@ const getPage = async (req, res) => {
 const createPage = async (req, res) => {
   try {
     const { title, content } = req.body;
+    const { blogId } = req.query;
     
-    // Mock page creation for demo
-    const newPage = {
-      id: Date.now().toString(),
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    if (!targetBlogId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
+    }
+
+    const pageData = {
       title,
-      content,
-      status: 'LIVE',
-      published: new Date().toISOString(),
-      updated: new Date().toISOString(),
-      url: `https://example.blogspot.com/p/${title.toLowerCase().replace(/\s+/g, '-')}.html`
+      content
     };
 
-    console.log('📄 Page created (mock):', newPage.title);
+    const newPage = await bloggerService.createPage(targetBlogId, pageData, req.user.id);
 
     res.status(201).json({
       success: true,
@@ -103,17 +126,30 @@ const updatePage = async (req, res) => {
   try {
     const { pageId } = req.params;
     const { title, content } = req.body;
+    const { blogId } = req.query;
     
-    // Mock page update for demo
-    const updatedPage = {
-      id: pageId,
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    if (!targetBlogId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
+    }
+
+    const pageData = {
       title,
-      content,
-      status: 'LIVE',
-      updated: new Date().toISOString()
+      content
     };
 
-    console.log('✏️  Page updated (mock):', updatedPage.title);
+    const updatedPage = await bloggerService.updatePage(targetBlogId, pageId, pageData, req.user.id);
 
     res.json({
       success: true,
@@ -134,8 +170,25 @@ const updatePage = async (req, res) => {
 const deletePage = async (req, res) => {
   try {
     const { pageId } = req.params;
+    const { blogId } = req.query;
     
-    console.log('🗑️  Page deleted (mock):', pageId);
+    // Set current user in service
+    bloggerService.setCurrentUser(req.user.id);
+    
+    // Get user's blogs first if no blogId provided
+    let targetBlogId = blogId;
+    if (!targetBlogId) {
+      const blogs = await bloggerService.getBlogs(req.user.id);
+      if (blogs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No blogs found for this user'
+        });
+      }
+      targetBlogId = blogs[0].blogId;
+    }
+
+    await bloggerService.deletePage(targetBlogId, pageId, req.user.id);
 
     res.json({
       success: true,

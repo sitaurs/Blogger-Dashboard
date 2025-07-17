@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 interface User {
   id: string;
   username: string;
   email: string;
+  role: string;
+  lastLogin: string;
 }
 
 interface AuthContextType {
@@ -25,11 +26,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthStatus = useCallback(async () => {
     try {
-      const token = Cookies.get('auth_token');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const response = await axios.get('/api/admin/me');
-        setUser(response.data);
+        setUser(response.data.user);
         setIsAuthenticated(true);
       }
     } catch (error) {
@@ -49,20 +50,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await axios.post('/api/admin/login', { username, password });
       const { token, user } = response.data;
       
-      Cookies.set('auth_token', token, { expires: 7 });
+      localStorage.setItem('auth_token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       setUser(user);
       setIsAuthenticated(true);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 423) {
+        alert('Account is temporarily locked due to too many failed attempts. Please try again later.');
+      } else if (error.response?.status === 401) {
+        alert('Invalid username or password');
+      } else {
+        alert('Login failed. Please try again.');
+      }
+      
       return false;
     }
   };
 
   const logout = () => {
-    Cookies.remove('auth_token');
+    localStorage.removeItem('auth_token');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     setIsAuthenticated(false);
