@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'blog-cms-backend',
+      name: 'blogger-dashboard-backend',
       cwd: 'backend',
       script: 'server.js',
       instances: 1,
@@ -12,7 +12,7 @@ module.exports = {
       }
     },
     {
-      name: 'blog-cms-frontend',
+      name: 'blogger-dashboard-frontend',
       script: 'npm',
       args: 'run preview -- --port 5173',
       env: {

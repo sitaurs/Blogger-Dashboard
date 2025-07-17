@@ -1,4 +1,4 @@
-# Pusat Kendali Blogger
+# Blogger Dashboard
 
 Sebuah aplikasi web full-stack yang elegan dan powerful untuk mengelola blog Blogger dengan antarmuka yang modern dan fitur yang lengkap.
 
@@ -47,7 +47,7 @@ Sebuah aplikasi web full-stack yang elegan dan powerful untuk mengelola blog Blo
 ### 1. Clone Repository
 ```bash
 git clone https://github.com/sitaurs/Blogger-Dashboard
-cd pusat-kendali-blogger
+cd blogger-dashboard
 ```
 
 ### 2. Install Dependencies
@@ -205,7 +205,7 @@ return response.data;
 ## 📁 Struktur Project
 
 ```
-pusat-kendali-blogger/
+blogger-dashboard/
 ├── src/                    # Frontend React
 │   ├── components/         # Komponen React
 │   ├── contexts/          # Context providers
@@ -341,7 +341,7 @@ npm run generate-token  # Generate OAuth token
    ```bash
    # Clone project
    git clone <repository-url>
-   cd pusat-kendali-blogger
+   cd blogger-dashboard
    
    # Install dependencies
    npm install
@@ -522,13 +522,13 @@ This project is licensed under the MIT License.
 
 ---
 
-**Pusat Kendali Blogger** - Mengelola blog dengan elegan dan efisien! 🚀
+**Blogger Dashboard** - Mengelola blog dengan elegan dan efisien! 🚀
 
 ### Quick Start Summary
 
 ```bash
 # 1. Clone & Install
-git clone <repo-url> && cd pusat-kendali-blogger
+git clone <repo-url> && cd blogger-dashboard
 npm install && cd backend && npm install && cd ..
 
 # 2. Run Application (development)
