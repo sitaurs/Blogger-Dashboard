@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-// Default to demo mode if APP_MODE is not set
+// Default to production mode if APP_MODE is not set
 if (!process.env.APP_MODE) {
-  process.env.APP_MODE = 'demo';
+  process.env.APP_MODE = 'production';
 }
 const express = require('express');
 const cors = require('cors');
