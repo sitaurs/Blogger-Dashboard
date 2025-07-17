@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Globe, User, Shield, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Globe, User, Shield, RefreshCw, CheckCircle, AlertCircle, type LucideIcon } from 'lucide-react';
 import { useBlog } from '../contexts/BlogContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,7 +9,13 @@ const Settings: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'blog' | 'oauth' | 'admin'>('blog');
 
-  const tabs = [
+  interface Tab {
+    id: 'blog' | 'oauth' | 'admin';
+    label: string;
+    icon: LucideIcon;
+  }
+
+  const tabs: Tab[] = [
     { id: 'blog', label: 'Blog Info', icon: Globe },
     { id: 'oauth', label: 'OAuth Status', icon: Shield },
     { id: 'admin', label: 'Admin', icon: User },
@@ -51,7 +57,7 @@ const Settings: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   activeTab === tab.id
                     ? 'bg-purple-500/30 text-white'

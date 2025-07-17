@@ -88,14 +88,11 @@ npm run dev
 
 **Opsi C: Gunakan PM2 (Keep Alive)**
 ```bash
-# Jalankan backend dengan PM2
-cd backend
-pm2 start ecosystem.config.js --env development
-
-# Jalankan frontend (build kemudian serve)
-cd ..
+# Build frontend terlebih dahulu
 npm run build
-pm2 serve dist 5173 --name frontend --spa
+
+# Jalankan keduanya dengan PM2
+pm2 start ecosystem.config.js
 ```
 
 ### 4. Akses Aplikasi
@@ -107,15 +104,17 @@ pm2 serve dist 5173 --name frontend --spa
 
 ## 🎮 Mode Demo vs Production
 
-### Mode Demo (Default - Siap Pakai)
-Aplikasi saat ini berjalan dalam **mode demo** dengan:
+### Mode Demo (Opsional)
+Secara bawaan aplikasi berjalan dalam **mode produksi**.
+Untuk mencoba antarmuka tanpa backend asli, Anda bisa mengaktifkan mode demo dengan mengatur `APP_MODE=demo` pada file `.env`.
+Mode demo menyediakan:
 - ✅ Mock data untuk semua fitur
 - ✅ Tidak memerlukan MongoDB
 - ✅ Tidak memerlukan Google OAuth setup
 - ✅ Siap pakai langsung untuk testing UI/UX
 - ✅ Login: admin/admin123
 
-Untuk beralih ke mode produksi, ubah variabel `APP_MODE` pada file `.env` menjadi `production`.
+
 
 ### Mode Production (Real Blogger Integration)
 Untuk menggunakan dengan Blogger API sesungguhnya:
@@ -357,11 +356,11 @@ npm run generate-token  # Generate OAuth token
    ```
 
 3. **PM2 Configuration**
-   
-   File `backend/ecosystem.config.js` sudah tersedia:
+
+   File `ecosystem.config.js` sudah tersedia di root project:
    ```bash
-   cd backend
-   pm2 start ecosystem.config.js --env production
+   npm run build
+   pm2 start ecosystem.config.js
    pm2 save
    pm2 startup
    ```
@@ -540,8 +539,8 @@ cd backend && npm run dev
 npm run dev
 
 # Untuk menjalankan terus-menerus gunakan PM2
-pm2 start backend/ecosystem.config.js --env development
-pm2 serve dist 5173 --name frontend --spa
+npm run build
+pm2 start ecosystem.config.js
 
 # 3. Access
 # Frontend: http://localhost:5173

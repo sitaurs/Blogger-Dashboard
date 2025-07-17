@@ -1,10 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any;
+  user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
@@ -14,14 +20,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAuthStatus();
-  }, []);
+  }, [checkAuthStatus]);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const token = Cookies.get('auth_token');
       if (token) {
@@ -36,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {

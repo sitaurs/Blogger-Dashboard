@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, TrendingUp, Eye, Users, BarChart3 } from 'lucide-react';
+import { Calendar, TrendingUp, Eye, Users, BarChart3, type LucideIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 // Mock data
@@ -69,7 +69,13 @@ const Stats: React.FC = () => {
     }
   };
 
-  const tabs = [
+  interface Tab {
+    id: 'daily' | 'weekly' | 'monthly';
+    label: string;
+    icon: LucideIcon;
+  }
+
+  const tabs: Tab[] = [
     { id: 'daily', label: 'Harian', icon: Calendar },
     { id: 'weekly', label: 'Mingguan', icon: BarChart3 },
     { id: 'monthly', label: 'Bulanan', icon: TrendingUp },
@@ -100,7 +106,7 @@ const Stats: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   activeTab === tab.id
                     ? 'bg-purple-500/30 text-white'

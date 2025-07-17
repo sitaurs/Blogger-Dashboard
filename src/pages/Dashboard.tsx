@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, File, MessageCircle, Eye, Users, TrendingUp } from 'lucide-react';
+import { FileText, File, MessageCircle, Eye } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Mock data
