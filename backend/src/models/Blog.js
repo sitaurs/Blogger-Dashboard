@@ -62,60 +62,63 @@ const blogSchema = new mongoose.Schema({
   lastSynced: {
     type: Date,
     default: Date.now
-  }
+  },
+  // Additional metadata from Blogger API
+  customMetaData: {
+    type: String,
+    default: ''
+  },
+  selfLink: String
 }, {
   timestamps: true
 });
 
-// Index for performance
+// Compound index for performance
+blogSchema.index({ userId: 1, isActive: 1 });
 blogSchema.index({ blogId: 1 });
-blogSchema.index({ userId: 1 });
 blogSchema.index({ status: 1 });
+blogSchema.index({ lastSynced: 1 });
 
 // Static method to find blogs by user
 blogSchema.statics.findByUser = function(userId) {
-  return this.find({ userId: userId, isActive: true });
+  return this.find({ userId: userId, isActive: true }).sort({ lastSynced: -1 });
 };
 
-// Static method to create or update blog
-blogSchema.statics.createOrUpdateBlog = async function(userId, blogData) {
+// Static method to create or update blog from Blogger API data
+blogSchema.statics.createOrUpdateFromBloggerData = async function(userId, bloggerData) {
   const existingBlog = await this.findOne({ 
-    blogId: blogData.id, 
+    blogId: bloggerData.id, 
     userId: userId 
   });
   
+  const blogData = {
+    blogId: bloggerData.id,
+    name: bloggerData.name,
+    description: bloggerData.description || '',
+    url: bloggerData.url,
+    status: bloggerData.status,
+    locale: bloggerData.locale,
+    posts: bloggerData.posts,
+    pages: bloggerData.pages,
+    published: new Date(bloggerData.published),
+    updated: new Date(bloggerData.updated),
+    userId: userId,
+    lastSynced: new Date(),
+    customMetaData: bloggerData.customMetaData || '',
+    selfLink: bloggerData.selfLink
+  };
+  
   if (existingBlog) {
     // Update existing blog
-    existingBlog.name = blogData.name;
-    existingBlog.description = blogData.description;
-    existingBlog.url = blogData.url;
-    existingBlog.status = blogData.status;
-    existingBlog.locale = blogData.locale;
-    existingBlog.posts = blogData.posts;
-    existingBlog.pages = blogData.pages;
-    existingBlog.updated = new Date(blogData.updated);
-    existingBlog.lastSynced = new Date();
-    
+    Object.assign(existingBlog, blogData);
     await existingBlog.save();
+    console.log('✅ Blog updated:', existingBlog.name);
     return existingBlog;
   } else {
     // Create new blog
-    const newBlog = new this({
-      blogId: blogData.id,
-      name: blogData.name,
-      description: blogData.description,
-      url: blogData.url,
-      status: blogData.status,
-      locale: blogData.locale,
-      posts: blogData.posts,
-      pages: blogData.pages,
-      published: new Date(blogData.published),
-      updated: new Date(blogData.updated),
-      userId: userId,
-      lastSynced: new Date()
-    });
-    
+    const newBlog = new this(blogData);
     await newBlog.save();
+    console.log('✅ Blog created:', newBlog.name);
     return newBlog;
   }
 };
@@ -124,6 +127,21 @@ blogSchema.statics.createOrUpdateBlog = async function(userId, blogData) {
 blogSchema.methods.updateSyncTime = async function() {
   this.lastSynced = new Date();
   await this.save();
+};
+
+// Method to get blog summary for API responses
+blogSchema.methods.toSummary = function() {
+  return {
+    id: this._id,
+    blogId: this.blogId,
+    name: this.name,
+    description: this.description,
+    url: this.url,
+    status: this.status,
+    posts: this.posts,
+    pages: this.pages,
+    lastSynced: this.lastSynced
+  };
 };
 
 const Blog = mongoose.model('Blog', blogSchema);

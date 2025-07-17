@@ -1,14 +1,21 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, File, MessageCircle, Eye, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { FileText, File, MessageCircle, Eye, Users, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useOverallStats, usePosts, useComments, useStats } from '../hooks/useApi';
 
 const Dashboard: React.FC = () => {
-  const { data: overallStats, isLoading: statsLoading, error: statsError } = useOverallStats();
-  const { data: postsData, isLoading: postsLoading } = usePosts({ limit: 5 });
-  const { data: commentsData, isLoading: commentsLoading } = useComments({ limit: 5 });
-  const { data: chartData, isLoading: chartLoading } = useStats('daily');
+  const { data: overallStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useOverallStats();
+  const { data: postsData, isLoading: postsLoading, refetch: refetchPosts } = usePosts({ limit: 5 });
+  const { data: commentsData, isLoading: commentsLoading, refetch: refetchComments } = useComments({ limit: 5 });
+  const { data: chartData, isLoading: chartLoading, refetch: refetchChart } = useStats('daily');
+
+  const handleRefreshAll = () => {
+    refetchStats();
+    refetchPosts();
+    refetchComments();
+    refetchChart();
+  };
 
   if (statsLoading || postsLoading || commentsLoading || chartLoading) {
     return (
@@ -27,7 +34,16 @@ const Dashboard: React.FC = () => {
         <div className="glass-card p-8 flex flex-col items-center space-y-4">
           <AlertCircle className="w-16 h-16 text-red-400" />
           <p className="text-red-200 text-lg font-medium">Failed to load dashboard</p>
-          <p className="text-red-200/80 text-sm">Please check your connection and try again</p>
+          <p className="text-red-200/80 text-sm text-center">
+            {statsError.message || 'Please check your connection and try again'}
+          </p>
+          <button
+            onClick={handleRefreshAll}
+            className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry</span>
+          </button>
         </div>
       </div>
     );
@@ -73,15 +89,24 @@ const Dashboard: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="flex items-center justify-between mb-8"
       >
-        <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
-        <p className="text-white/60 mt-2">Selamat datang di Pusat Kendali Blogger</p>
-        {overallStats?.lastUpdated && (
-          <p className="text-white/40 text-sm mt-1">
-            Terakhir diperbarui: {new Date(overallStats.lastUpdated).toLocaleString('id-ID')}
-          </p>
-        )}
+        <div>
+          <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
+          <p className="text-white/60 mt-2">Selamat datang di Pusat Kendali Blogger</p>
+          {overallStats?.lastUpdated && (
+            <p className="text-white/40 text-sm mt-1">
+              Terakhir diperbarui: {new Date(overallStats.lastUpdated).toLocaleString('id-ID')}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={handleRefreshAll}
+          className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
+        </button>
       </motion.div>
 
       {/* Stats Cards */}
@@ -177,6 +202,11 @@ const Dashboard: React.FC = () => {
               />
             </LineChart>
           </ResponsiveContainer>
+          {chartData?.note && (
+            <p className="text-yellow-400/80 text-sm mt-3 bg-yellow-500/10 p-3 rounded-lg">
+              💡 {chartData.note}
+            </p>
+          )}
         </motion.div>
       )}
 
@@ -207,6 +237,11 @@ const Dashboard: React.FC = () => {
                       {post.published && (
                         <span className="text-white/60 text-xs">
                           {new Date(post.published).toLocaleDateString('id-ID')}
+                        </span>
+                      )}
+                      {post.labels && post.labels.length > 0 && (
+                        <span className="text-white/40 text-xs">
+                          {post.labels.slice(0, 2).join(', ')}
                         </span>
                       )}
                     </div>
@@ -263,6 +298,28 @@ const Dashboard: React.FC = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Top Labels */}
+      {overallStats?.topLabels && overallStats.topLabels.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="glass-card p-6"
+        >
+          <h2 className="text-xl font-semibold text-white mb-4">Label Terpopuler</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {overallStats.topLabels.map((labelData: any, index: number) => (
+              <div key={labelData.label} className="text-center">
+                <div className="bg-purple-500/20 rounded-lg p-4">
+                  <p className="text-purple-300 font-medium">{labelData.label}</p>
+                  <p className="text-purple-200 text-sm mt-1">{labelData.count} posts</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

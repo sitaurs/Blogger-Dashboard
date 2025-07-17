@@ -138,8 +138,90 @@ const changePassword = async (req, res) => {
   }
 };
 
+// OAuth authorization endpoint
+const getAuthUrl = async (req, res) => {
+  try {
+    const authUrl = await bloggerService.getAuthUrl();
+    
+    res.json({
+      success: true,
+      authUrl,
+      message: 'Authorization URL generated successfully'
+    });
+  } catch (error) {
+    console.error('Get auth URL error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate authorization URL',
+      error: error.message
+    });
+  }
+};
+
+// OAuth callback endpoint
+const handleOAuthCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Authorization code is required'
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await bloggerService.exchangeCodeForTokens(code, req.user.id);
+    
+    res.json({
+      success: true,
+      message: 'OAuth authorization successful',
+      hasRefreshToken: !!tokens.refresh_token
+    });
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'OAuth authorization failed',
+      error: error.message
+    });
+  }
+};
+
+// Check OAuth status
+const getOAuthStatus = async (req, res) => {
+  try {
+    const OAuthToken = require('../models/OAuthToken');
+    const tokenData = await OAuthToken.findActiveToken(req.user.id);
+    
+    if (!tokenData) {
+      return res.json({
+        success: true,
+        isAuthorized: false,
+        message: 'No OAuth token found'
+      });
+    }
+
+    res.json({
+      success: true,
+      isAuthorized: true,
+      tokenInfo: tokenData.toSafeObject()
+    });
+  } catch (error) {
+    console.error('Get OAuth status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get OAuth status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   login,
   getMe,
-  changePassword
+  changePassword,
+  getAuthUrl,
+  handleOAuthCallback,
+  getOAuthStatus
 };

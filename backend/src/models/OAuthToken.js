@@ -4,7 +4,8 @@ const oauthTokenSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',
-    required: true
+    required: true,
+    unique: true // One token per user
   },
   accessToken: {
     type: String,
@@ -34,6 +35,10 @@ const oauthTokenSchema = new mongoose.Schema({
   lastRefreshed: {
     type: Date,
     default: Date.now
+  },
+  googleUserId: {
+    type: String,
+    required: false // Google user ID for additional validation
   }
 }, {
   timestamps: true
@@ -42,6 +47,7 @@ const oauthTokenSchema = new mongoose.Schema({
 // Index for performance
 oauthTokenSchema.index({ userId: 1 });
 oauthTokenSchema.index({ expiresAt: 1 });
+oauthTokenSchema.index({ isActive: 1 });
 
 // Virtual to check if token is expired
 oauthTokenSchema.virtual('isExpired').get(function() {
@@ -59,12 +65,12 @@ oauthTokenSchema.statics.findActiveToken = function(userId) {
   return this.findOne({ 
     userId: userId, 
     isActive: true 
-  }).sort({ createdAt: -1 });
+  });
 };
 
 // Static method to create or update token
 oauthTokenSchema.statics.createOrUpdateToken = async function(userId, tokenData) {
-  // Deactivate existing tokens
+  // Deactivate existing tokens for this user
   await this.updateMany(
     { userId: userId }, 
     { isActive: false }
@@ -78,10 +84,13 @@ oauthTokenSchema.statics.createOrUpdateToken = async function(userId, tokenData)
     expiresAt: new Date(tokenData.expiry_date),
     scope: tokenData.scope || 'https://www.googleapis.com/auth/blogger',
     tokenType: tokenData.token_type || 'Bearer',
-    isActive: true
+    googleUserId: tokenData.google_user_id,
+    isActive: true,
+    lastRefreshed: new Date()
   });
   
   await newToken.save();
+  console.log('✅ OAuth token saved for user:', userId);
   return newToken;
 };
 
@@ -91,16 +100,21 @@ oauthTokenSchema.methods.updateAccessToken = async function(newAccessToken, newE
   this.expiresAt = new Date(newExpiresAt);
   this.lastRefreshed = new Date();
   await this.save();
+  console.log('✅ Access token refreshed for user:', this.userId);
   return this;
 };
 
-// Method to safely return token data
-oauthTokenSchema.methods.toJSON = function() {
-  const tokenObj = this.toObject();
-  // Don't expose sensitive tokens in JSON
-  delete tokenObj.accessToken;
-  delete tokenObj.refreshToken;
-  return tokenObj;
+// Method to safely return token data (exclude sensitive info)
+oauthTokenSchema.methods.toSafeObject = function() {
+  return {
+    userId: this.userId,
+    expiresAt: this.expiresAt,
+    scope: this.scope,
+    isActive: this.isActive,
+    lastRefreshed: this.lastRefreshed,
+    isExpired: this.isExpired,
+    needsRefresh: this.needsRefresh()
+  };
 };
 
 const OAuthToken = mongoose.model('OAuthToken', oauthTokenSchema);
