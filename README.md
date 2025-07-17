@@ -86,6 +86,18 @@ node server.js
 npm run dev
 ```
 
+**Opsi C: Gunakan PM2 (Keep Alive)**
+```bash
+# Jalankan backend dengan PM2
+cd backend
+pm2 start ecosystem.config.js --env development
+
+# Jalankan frontend (build kemudian serve)
+cd ..
+npm run build
+pm2 serve dist 5173 --name frontend --spa
+```
+
 ### 4. Akses Aplikasi
 - **Frontend**: `http://localhost:5173`
 - **Backend API**: `http://localhost:3002`
@@ -520,12 +532,16 @@ This project is licensed under the MIT License.
 git clone <repo-url> && cd pusat-kendali-blogger
 npm install && cd backend && npm install && cd ..
 
-# 2. Run Application
+# 2. Run Application (development)
 # Terminal 1:
 cd backend && npm run dev
 
 # Terminal 2:
 npm run dev
+
+# Untuk menjalankan terus-menerus gunakan PM2
+pm2 start backend/ecosystem.config.js --env development
+pm2 serve dist 5173 --name frontend --spa
 
 # 3. Access
 # Frontend: http://localhost:5173

@@ -1,4 +1,9 @@
 require('dotenv').config();
+
+// Default to demo mode if APP_MODE is not set
+if (!process.env.APP_MODE) {
+  process.env.APP_MODE = 'demo';
+}
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
