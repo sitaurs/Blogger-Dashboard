@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Plus, Edit, Trash2, Eye, Calendar, AlertCircle } from 'lucide-react';
 import { usePosts, useDeletePost } from '../hooks/useApi';
+import PostEditor from '../components/PostEditor';
 
 const Posts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | undefined>();
   const postsPerPage = 10;
 
   const { data: postsData, isLoading, error, refetch } = usePosts({
@@ -27,6 +30,25 @@ const Posts: React.FC = () => {
         alert('Gagal menghapus postingan');
       }
     }
+  };
+
+  const handleCreatePost = () => {
+    setEditingPostId(undefined);
+    setIsEditorOpen(true);
+  };
+
+  const handleEditPost = (postId: string) => {
+    setEditingPostId(postId);
+    setIsEditorOpen(true);
+  };
+
+  const handleCloseEditor = () => {
+    setIsEditorOpen(false);
+    setEditingPostId(undefined);
+  };
+
+  const handleSavePost = () => {
+    refetch();
   };
 
   const getStatusColor = (status: string) => {
@@ -99,7 +121,10 @@ const Posts: React.FC = () => {
             </p>
           )}
         </div>
-        <button className="glass-button px-4 py-2 text-white rounded-lg hover:scale-105 transition-all duration-200 flex items-center space-x-2 mt-4 sm:mt-0">
+        <button 
+          onClick={handleCreatePost}
+          className="glass-button px-4 py-2 text-white rounded-lg hover:scale-105 transition-all duration-200 flex items-center space-x-2 mt-4 sm:mt-0"
+        >
           <Plus className="w-4 h-4" />
           <span>Buat Postingan</span>
         </button>
@@ -209,6 +234,7 @@ const Posts: React.FC = () => {
                             </a>
                           )}
                           <button 
+                            onClick={() => handleEditPost(post.id)}
                             className="p-2 hover:bg-white/10 rounded-lg transition-colors" 
                             title="Edit"
                           >
@@ -296,13 +322,24 @@ const Posts: React.FC = () => {
                 : 'Belum ada postingan yang dibuat'
               }
             </p>
-            <button className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2 mx-auto">
+            <button 
+              onClick={handleCreatePost}
+              className="glass-button px-4 py-2 text-white rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2 mx-auto"
+            >
               <Plus className="w-4 h-4" />
               <span>Buat Postingan Pertama</span>
             </button>
           </div>
         )}
       </motion.div>
+
+      {/* Post Editor Modal */}
+      <PostEditor
+        postId={editingPostId}
+        isOpen={isEditorOpen}
+        onClose={handleCloseEditor}
+        onSave={handleSavePost}
+      />
     </div>
   );
 };
