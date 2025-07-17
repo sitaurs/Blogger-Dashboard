@@ -32,12 +32,6 @@ export const BlogProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchBlogs();
-    }
-  }, [isAuthenticated]);
-
   const fetchBlogs = async () => {
     try {
       setLoading(true);
@@ -52,6 +46,12 @@ export const BlogProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchBlogs();
+    }
+  }, [isAuthenticated]);
 
   const refreshBlogs = async () => {
     await fetchBlogs();
