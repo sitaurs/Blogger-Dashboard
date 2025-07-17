@@ -21,7 +21,7 @@ server {
 
     # Frontend (React build)
     location / {
-        root /path/to/pusat-kendali-blogger/dist;  # Update this path
+        root /path/to/blogger-dashboard/dist;  # Update this path
         index index.html;
         try_files $uri $uri/ /index.html;
         

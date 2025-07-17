@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'pusat-kendali-blogger',
+    name: 'blogger-dashboard',
     script: './server.js',
     instances: 'max',
     exec_mode: 'cluster',
